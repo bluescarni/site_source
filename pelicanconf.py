@@ -21,7 +21,7 @@ AUTHOR_FEED_RSS = None
 
 THEME = './pure-theme'
 
-#TAGLINE = 'The Analytical Don Quixote'
+TAGLINE = 'Stuff of various degrees of importance'
 
 #PROFILE_IMG_URL = 'http://www.gravatar.com/avatar/4dd67eab56c9687453c13002faf3df36'
 SOCIAL = (

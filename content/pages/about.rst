@@ -20,4 +20,4 @@ You can reach me via email at bluescarni .the_at_sign. gmail dot you know what.
 .. _Max Planck Institute for Astronomy: http://www.mpia.de/en
 .. _Advanced Concepts Team: http://www.esa.int/gsp/ACT/index.html
 .. _Schlumberger: http://www.slb.com/
-.. _Piranha: https://github.com/bluescarni/piranha
+.. _Piranha: http://bluescarni.github.io/piranha
