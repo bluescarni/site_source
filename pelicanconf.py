@@ -45,7 +45,7 @@ DISPLAY_PAGES_ON_MENU = True
 # Uncomment following line if you want document-relative URLs when developing
 #RELATIVE_URLS = True
 
-COVER_IMG_URL = 'http://upload.wikimedia.org/wikipedia/commons/b/b9/Caspar_David_Friedrich_-_Wanderer_above_the_sea_of_fog.jpg'
+COVER_IMG_URL = 'https://raw.githubusercontent.com/bluescarni/site_source/master/side_pic.jpg'
 
 MENUITEMS = [('About','pages/about-me.html'),
              ('Research','pages/research.html'),
