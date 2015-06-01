@@ -40,6 +40,8 @@ SOCIAL = (
 
 DEFAULT_PAGINATION = 10
 
+DEFAULT_DATE = 'fs'
+
 DISPLAY_PAGES_ON_MENU = True
 
 # Uncomment following line if you want document-relative URLs when developing
@@ -50,3 +52,5 @@ COVER_IMG_URL = 'https://raw.githubusercontent.com/bluescarni/site_source/master
 MENUITEMS = [('About','pages/about-me.html'),
              ('Research','pages/research.html'),
              ('Software','pages/software.html')]
+
+PLUGINS = ["render_math"]
