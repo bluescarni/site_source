@@ -2,7 +2,7 @@ Overloading overloaded
 ######################
 
 :tags: c++,coding
-:summary: Template-based, SFINAE-friendly multiple dispatching with C++11
+:summary: Template-based, SFINAE-friendly compile-time multiple dispatch with C++11
 
 Introduction and motivation
 ***************************
@@ -106,7 +106,7 @@ to realise this goal and that an alternative approach was necessary.
 A generic ``cos()`` implementation
 **********************************
 
-The solution adopted in Piranha takes inspiration from the aforementioned `GotW`_. There is a single
+The solution adopted in Piranha starts from where the aforementioned `GotW`_ ends. There is a single
 generic ``cos()`` function in the ``math`` sub-namespace which looks like this:
 
 .. code-block:: c++
@@ -195,7 +195,7 @@ an argument of type ``int``. The error resulting from the
 compilation thus originates from the missing ``cos()`` function rather than from the missing call operator. The distinction
 between these two types of error might appear academic at first sight (after all, we end up in both cases with an aborted
 compilation), but it is crucial for the development of further
-metaprogramming techniques involving the detection of the availability of a function at compile time.
+metaprogramming techniques involving the detection of the availability of a function at compile-time.
 
 .. _SFINAE: http://en.cppreference.com/w/cpp/language/sfinae#Expression_SFINAE
 
@@ -216,6 +216,8 @@ interesting features:
 * the technique is non-intrusive: user-defined types are not required to derive from a common base class or to
   implement specific methods in order to be usable by our generic ``cos()`` function.
   They will only need to provide an additional specialisation of the implementation functor;
+* the technique is SFINAE-friendly: in case the ``cos_impl`` specialisation is missing, the ``cos()`` function
+  is removed from the overload resolution set;
 * unlike with normal function overloading, we can specialise the behaviour not only based on concrete types, but
   on arbitrary compile-time *predicates*.
 
@@ -246,7 +248,13 @@ This predicate would catch all the standard unsigned `integral types`_ available
 .. _integral types: http://en.cppreference.com/w/cpp/language/types#Integer_types
 
 Intermission: detecting the availability of ``cos()``
-*****************************************************
+=====================================================
+
+One of the points mentioned above is the "SFINAE-friendliness" of the solution: in case of a missing
+``cos_impl`` specialisation, the ``cos()`` function is removed from the overload resolution set. We can use this
+property to implement a type trait that detects the availability of a ``cos()`` for a specific type at compile-time.
+
+A possible, C++11-oriented way of implementing such a type trait (by no means the only one) is the following:
 
 .. code-block:: c++
 
@@ -261,3 +269,58 @@ Intermission: detecting the availability of ``cos()``
        public:
            static const bool value = std::is_same<decltype(test(std::declval<T>())),yes>::value;
    };
+
+Without getting into the details of the implementation (the interested reader can use this `Wikibooks page`_
+as a starting point), the important takeaway is that now
+
+.. code-block:: c++
+
+   has_cosine<double>::value
+
+is a compile-time constant with ``true`` value, while
+
+.. code-block:: c++
+
+   has_cosine<int>::value
+
+is a compile-time constant with ``false`` value. In Piranha, most generic functions are paired with a
+type trait that determines at compile-time whether it is possible or not to call the function with
+a specific set of argument types. Such type traits become then the basic building blocks of compile-time
+algorithms that, for instance, can select different implementations of a specific functionality based
+on the capabilities offered by the involved types.
+
+.. _Wikibooks page: http://en.wikibooks.org/wiki/More_C%2B%2B_Idioms/Member_Detector
+
+A step further: exploiting the default implementation
+*****************************************************
+
+In the example above, it does not make much sense to provide a default implementation for cosine, and thus
+the unspecialised ``cos_impl`` functor does not implement any call operator. For other operations, however,
+a default implementation might actually make sense.
+
+Consider for instance the classic `multiply-accumulate operation`_ (FMA for short). Since it is at the basis of so many algorithms,
+from linear algebra to symbolic manipulation, many libraries provide optimised implementations of this primitive.
+A few examples:
+
+* the `C++ standard library`_ offers ``std::fma()``, usable with floating-point types;
+* the `GMP library`_ offers ``mpz_addmul()``;
+* the `MPFR library`_ offers ``mpfr_fma()``.
+
+.. _multiply-accumulate operation: http://en.wikipedia.org/wiki/Multiply%E2%80%93accumulate_operation
+.. _C++ standard library: http://en.cppreference.com/w/cpp/numeric/math/fma
+.. _GMP library: https://gmplib.org/manual/Integer-Arithmetic.html
+.. _MPFR library: http://www.mpfr.org/mpfr-current/mpfr.html#Special-Functions
+
+The use of a specialised FMA operation can typically result in increased performance and/or accuracy.
+In a generic scientific library it thus makes sense to try to take advantage of such a feature, if
+available.
+
+On the other hand, it would be nice not to force the user of the library to implement the FMA primitive for
+her user-defined type, if for any reason she is not interested in it. The FMA operation, after all,
+is essentially
+
+.. math::
+
+   a \leftarrow a + ( b \times c )
+
+so it can be implemented also in terms of addition, multiplication and assignment.
