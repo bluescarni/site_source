@@ -213,7 +213,7 @@ interesting features:
 * we are also avoiding surprises with implicit conversions: the example above shows how the implementation
   is based on exact type matching - use with an ``int`` argument will result in a compilation error, even if
   ``int`` instances are implicitly convertible to floating-point types;
-* the technique is non-intrusive: user-defined types are not required to derive from a common base class or to
+* the technique is nonintrusive: user-defined types are not required to derive from a common base class or to
   implement specific methods in order to be usable by our generic ``cos()`` function.
   They will only need to provide an additional specialisation of the implementation functor;
 * the technique is SFINAE-friendly: in case the ``cos_impl`` specialisation is missing, the ``cos()`` function
@@ -315,12 +315,117 @@ The use of a specialised FMA operation can typically result in increased perform
 In a generic scientific library it thus makes sense to try to take advantage of such a feature, if
 available.
 
-On the other hand, it would be nice not to force the user of the library to implement the FMA primitive for
-her user-defined type, if for any reason she is not interested in it. The FMA operation, after all,
-is essentially
+On the other hand, a specialised FMA is an optimisation: it would be nice not to force the user of the library
+to implement the FMA primitive for her user-defined type, if for any reason she is not interested in it. The FMA operation, after all,
+is essentially equivalent to
 
 .. math::
 
    a \leftarrow a + ( b \times c )
 
 so it can be implemented also in terms of addition, multiplication and assignment.
+
+In Piranha, the FMA operation is called ``multiply_accumulate()``, and its implementation reads:
+
+.. code-block:: c++
+
+   template <typename T>
+   inline auto multiply_accumulate(T &x, const T &y, const T &z) ->
+      decltype(multiply_accumulate_impl<T>()(x,y,z))
+   {
+      return multiply_accumulate_impl<T>()(x,y,z);
+   }
+
+The default implementation functor is:
+
+.. code-block:: c++
+
+   template <typename T, typename = void>
+   struct multiply_accumulate_impl
+   {
+      template <typename T2>
+      auto operator()(T2 &x, const T2 &y, const T2 &z) const -> decltype(x += y * z)
+      {
+         return x += y * z;
+      }
+   };
+
+(More on that second template parameter ``T2`` in a moment)
+
+The call operator of the default implementation is now present, and it implements the FMA operation in terms of multiplication
+and in-place addition. Any type which supports these two operations (e.g., ``int``) will thus have a working FMA implementation.
+
+We can now specialise the behaviour for, e.g., floating point types:
+
+.. code-block:: c++
+
+   template <typename T>
+   struct multiply_accumulate_impl<T,typename std::enable_if<std::is_floating_point<T>::value>::type>
+   {
+      auto operator()(T &x, const T &y, const T &z) const -> decltype(x = std::fma(y,z,x))
+      {
+         return x = std::fma(y,z,x);
+      }
+   };
+
+What happens when we try to call the default implementation on a type which does not support addition, multiplication or
+assignment? Let's try an FMA on ``std::string``:
+
+.. code-block:: bash
+
+   error: no matching function for call to ‘multiply_accumulate(std::string&, std::string&, std::string&)’
+
+It looks like the ``multiply_accumulate()`` function for ``std::string`` has been erased, and there is no reference to the missing
+``*`` operator for ``std::string``. How does this happen? The answer is in the implementation of the call
+operator in the default implementation of ``multiply_accumulate_impl``:
+
+.. code-block:: c++
+
+   template <typename T2>
+   auto operator()(T2 &x, const T2 &y, const T2 &z) const -> decltype(x += y * z)
+   {
+      return x += y * z;
+   }
+
+This operator is a template method which deduces its return type from the expression ``x += y * z``. As such, if the
+expression ``x += y * z`` is ill-formed, then the call operator is, under SFINAE rules, removed from the overload resolution set,
+and ``multiply_accumulate_impl`` is effectively left without a call operator. The top-level ``multiply_accumulate()`` function
+will then see, when called with ``std::string`` arguments, a ``multiply_accumulate_impl`` functor with no call operator, and thus
+SFINAE rules will also remove the ``multiply_accumulate()`` function from the overload resolution set. The compiler's error
+message lamenting the lack of a suitable ``multiply_accumulate()`` function is thus explained. This also means that, even in the
+presence of a default implementation, it will still be possible to write a type trait to detect the availability
+of ``multiply_accumulate()``, in the same fashion as done above for ``has_cosine``.
+
+Generalising to multiple arguments
+**********************************
+
+The two examples we have seen so far involve specialisation based on a single type (``cos()`` is a single-argument function,
+``multiply_accumulate()`` operates on three arguments of the same type by design). It is however clear that the patterns described
+above can readily be generalised to functions accepting multiple arguments of different types.
+
+An obvious example is exponentiation, ``pow()``, which is a function of two arguments: a base and an exponent.
+In Piranha, the ``pow()`` function has different implementations depending on the involved types. A few examples:
+
+* if both the base and the exponent are C++ arithmetic types and at least one of the two arguments is a floating-point type,
+  then ``std::pow()`` is used;
+* if at least one argument is an ``integer`` (an arbitrary precision integral type implemented on top of GMP) and the other
+  is an ``integer`` or a C++ integral type, then the exact result will be returned as an ``integer`` (computed via a GMP routine);
+* if an argument is an ``integer`` and the other one is a floating-point type, then the ``integer`` argument is converted to
+  the floating-point type and the result computed via ``std::pow()``;
+* if the two arguments are both C++ integral types, then the exact result is returned as an ``integer``.
+
+The implementation of Piranha's ``pow()`` function is too long to be reproduced here. It is avaiable from the `Git repository`_ for the
+interested reader. As in the previous examples, the implementation is SFINAE-friendly and lends itself to compile-time introspection
+via a type trait.
+
+.. _Git repository: https://github.com/bluescarni/piranha/blob/4d600d04b48af3ce241d91d2f8f0fde45f822872/src/pow.hpp
+
+Closing remarks
+***************
+
+SFINAE-based template metaprogramming in C++11 can be used to introduce a flexible and efficient method of compile-time function dispatching based
+on partial class template specialisation. The method is nonintrusive, it has no runtime CPU or memory overhead, it sidesteps some problematic aspects
+of function overloading, and it allows to select different
+implementations of the same function for different combinations of argument types. The selection can be based either on exact type
+matching or, more generally, on logical compile-time predicates on the involved types. The technique is SFINAE-friendly and lends itself
+to compile-time introspection.
