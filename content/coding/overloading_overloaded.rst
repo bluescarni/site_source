@@ -1,7 +1,7 @@
 Overloading overloaded
 ######################
 
-:tags: c++,coding
+:tags: c++,coding,piranha
 :summary: Template-based, SFINAE-friendly compile-time multiple dispatch with C++11
 
 Introduction and motivation
@@ -56,12 +56,10 @@ depending on the context.
 
 .. _gory details: http://en.cppreference.com/w/cpp/concept/Compare
 
-The second option is to equip a type with an appropriate ``operator<()`` implementation
-via `operator overloading`_. While for ``std::complex`` this is probably not a good idea
+The second option is to equip the type with an appropriate ``operator<()`` implementation.
+While for ``std::complex`` this is probably not a good idea
 (due to the lack of a "natural" ordering for complex numbers),
 for other types it is certainly an appropriate solution.
-
-.. _operator overloading: http://en.wikipedia.org/wiki/Operator_overloading
 
 Now, one of the challenges I faced with
 `Piranha`_ was related to the design of a generic and user-extensible
@@ -169,7 +167,7 @@ comes into play only when ``T`` is a floating-point type, thus an ``int`` argume
 unspecialised default ``cos_impl`` functor. The unspecialised ``cos_impl`` does not provide any call operator,
 and thus a compile-time error will arise. GCC 5.1 says:
 
-.. code-block:: bash
+.. code-block:: console
 
    $ g++-5.1.0 -std=c++11 cos.cpp
    [...]
@@ -218,10 +216,10 @@ interesting features:
   They will only need to provide an additional specialisation of the implementation functor;
 * the technique is SFINAE-friendly: in case the ``cos_impl`` specialisation is missing, the ``cos()`` function
   is removed from the overload resolution set;
-* unlike with normal function overloading, we can specialise the behaviour not only based on concrete types, but
+* unlike with usual function overloading, we can specialise the behaviour not only based on concrete types, but
   on arbitrary compile-time *predicates*.
 
-The last point is, I think, particularily interesting. It is not unusal in scientific C++ libraries to see either
+The last point is, I think, particularly interesting. It is not unusual in scientific C++ libraries to see either
 
 * heavy usage of macros to declare and define multiple overloads of the same function with different
   argument types (``float``, ``double``, ``long``, etc.), or
@@ -252,7 +250,7 @@ Intermission: detecting the availability of ``cos()``
 
 One of the points mentioned above is the "SFINAE-friendliness" of the solution: in case of a missing
 ``cos_impl`` specialisation, the ``cos()`` function is removed from the overload resolution set. We can use this
-property to implement a type trait that detects the availability of a ``cos()`` for a specific type at compile-time.
+property to implement a type trait that detects the availability of ``cos()`` for a specific type at compile-time.
 
 A possible, C++11-oriented way of implementing such a type trait (by no means the only one) is the following:
 
@@ -371,7 +369,7 @@ We can now specialise the behaviour for, e.g., floating point types:
 What happens when we try to call the default implementation on a type which does not support addition, multiplication or
 assignment? Let's try an FMA on ``std::string``:
 
-.. code-block:: bash
+.. code-block:: console
 
    error: no matching function for call to ‘multiply_accumulate(std::string&, std::string&, std::string&)’
 
@@ -391,8 +389,7 @@ This operator is a template method which deduces its return type from the expres
 expression ``x += y * z`` is ill-formed, then the call operator is, under SFINAE rules, removed from the overload resolution set,
 and ``multiply_accumulate_impl`` is effectively left without a call operator. The top-level ``multiply_accumulate()`` function
 will then see, when called with ``std::string`` arguments, a ``multiply_accumulate_impl`` functor with no call operator, and thus
-SFINAE rules will also remove the ``multiply_accumulate()`` function from the overload resolution set. The compiler's error
-message lamenting the lack of a suitable ``multiply_accumulate()`` function is thus explained. This also means that, even in the
+SFINAE rules will also remove the ``multiply_accumulate()`` function from the overload resolution set. This also means that, even in the
 presence of a default implementation, it will still be possible to write a type trait to detect the availability
 of ``multiply_accumulate()``, in the same fashion as done above for ``has_cosine``.
 
@@ -414,7 +411,10 @@ In Piranha, the ``pow()`` function has different implementations depending on th
   the floating-point type and the result computed via ``std::pow()``;
 * if the two arguments are both C++ integral types, then the exact result is returned as an ``integer``.
 
-The implementation of Piranha's ``pow()`` function is too long to be reproduced here. It is avaiable from the `Git repository`_ for the
+Additional specialisations are implemented for Piranha's ``real`` and ``rational`` types (``real`` is a C++ wrapper around MPFR's ``mpfr_t`` type,
+``rational`` an arbitrary-precision rational type built on top of ``integer``).
+
+The implementation of Piranha's ``pow()`` function is too long to be reproduced here. It is available from the `Git repository`_ for the
 interested reader. As in the previous examples, the implementation is SFINAE-friendly and lends itself to compile-time introspection
 via a type trait.
 

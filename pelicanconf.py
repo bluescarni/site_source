@@ -54,3 +54,5 @@ MENUITEMS = [('About','pages/about-me.html'),
              ('Software','pages/software.html')]
 
 PLUGINS = ["render_math"]
+
+TYPOGRIFY = True
