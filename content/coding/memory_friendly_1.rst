@@ -496,9 +496,9 @@ Configuration                 Time (s) Memory (GB)
 
 We can see how the static storage ``integer`` provides a runtime speedup of about 2x with respect to the ``mpz_t`` wrapper. It also uses
 about 10% less memory. The runtime performance of the dynamic storage ``integer`` is essentially equivalent to the performance of the ``mpz_t`` wrapper
-(~0.5% difference), but the memory utilisation goes up by about 14%. In this sense the test is not completely fair, as the forced conversion
+(~0.5% difference), but the memory utilisation goes up by about 14%. It should be noticed that, in this case, the test is not completely fair, as the forced conversion
 to dynamic storage in the second ``integer`` test results in the unnecessary waste of the inline static storage. In a more realistic scenario,
-dynamic storage would kick in when at least 3 limbs are necessary to represent the value and thus the waste of the static storage would be
+dynamic storage would kick in when at least 3 limbs are necessary to represent the value and thus the waste of static storage would be
 proportionally smaller (one wasted static limb vs 3 dynamically allocated limbs).
 
 Another important point of caution in this type of test is that we are measuring not only the impact of the small integer optimisation on the memory subsystem, but,
