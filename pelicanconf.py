@@ -53,6 +53,6 @@ MENUITEMS = [('About','pages/about-me.html'),
              ('Research','pages/research.html'),
              ('Software','pages/software.html')]
 
-PLUGINS = ["render_math"]
+PLUGINS = ['render_math']
 
 TYPOGRIFY = True
