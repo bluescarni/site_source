@@ -53,6 +53,8 @@ MENUITEMS = [('About','pages/about-me.html'),
              ('Research','pages/research.html'),
              ('Software','pages/software.html')]
 
+MATH_JAX = {'responsive':True}
+
 PLUGINS = ['render_math']
 
 TYPOGRIFY = True
